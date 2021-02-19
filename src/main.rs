@@ -6,7 +6,8 @@ use std::io::Read;
 
 use prometheus::Encoder;
 
-const MOUNTPOINT: &str = "/sys/fs/cgroup";
+//const MOUNTPOINT: &str = "/sys/fs/cgroup";
+//static mut MOUNTPOINT: &str = "/sys/fs/cgroup";
 const PRESSURE_SUFFIX: &str = ".pressure";
 
 fn main() {
@@ -14,6 +15,13 @@ fn main() {
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about(clap::crate_description!())
+        .arg(
+            clap::Arg::with_name("path.cgroup")
+                .help("Path to cgroup location")
+                .long("path.cgroup")
+                .takes_value(true)
+                .default_value("/sys/fs/cgroup")
+        )
         .arg(
             clap::Arg::with_name("web.listen-address")
                 .help("Address on which to expose metrics and web interface")
@@ -41,6 +49,7 @@ fn main() {
         .get_matches();
 
     let addr = &matches.value_of("web.listen-address").unwrap();
+    let mountpoint = matches.value_of("path.cgroup").unwrap();
 
     let report_avg = !matches.is_present("metrics.disable-avg");
     let report_zeros = !matches.is_present("metrics.silence-zeros");
@@ -57,7 +66,7 @@ fn main() {
     .unwrap();
 
     for request in server.incoming_requests() {
-        let metrics = registry(&get_service_measurements(), report_avg, report_zeros).gather();
+        let metrics = registry(&get_service_measurements(mountpoint), report_avg, report_zeros).gather();
         let mut buffer = vec![];
         encoder.encode(&metrics, &mut buffer).unwrap();
 
@@ -178,10 +187,10 @@ macro_rules! skip_fail {
     };
 }
 
-fn get_service_measurements() -> HashMap<String, PsiMeasurements> {
+fn get_service_measurements(mountpoint: &str) -> HashMap<String, PsiMeasurements> {
     let mut services: HashMap<_, PsiMeasurements> = HashMap::new();
 
-    for entry in walkdir::WalkDir::new(MOUNTPOINT)
+    for entry in walkdir::WalkDir::new(mountpoint)
         .into_iter()
         .filter_entry(|e| is_interesting(e))
         .filter(|e| is_pressure(&e.as_ref().unwrap()))
@@ -190,7 +199,7 @@ fn get_service_measurements() -> HashMap<String, PsiMeasurements> {
         let path = entry.path();
 
         let dir_name = std::path::Path::new("/")
-            .join(path.parent().unwrap().strip_prefix(MOUNTPOINT).unwrap())
+            .join(path.parent().unwrap().strip_prefix(mountpoint).unwrap())
             .to_str()
             .unwrap()
             .to_string();
