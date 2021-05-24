@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: psi-exporter
+  name: psi-exporter
+  namespace: openshift-monitoring
+spec:
+  clusterIP: None
+  ports:
+  - name: psi-exporter 
+    port: 12345  
+    protocol: TCP
+    targetPort: 12345 
+  selector:
+    app.kubernetes.io/name: psi-exporter
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

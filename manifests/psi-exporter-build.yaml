@@ -1,0 +1,23 @@
+apiVersion: build.openshift.io/v1
+kind: Build
+metadata:
+  annotations:
+    openshift.io/build.pod-name: psi-exporter-build
+  name: psi-exporter
+spec:
+  output:
+    to:
+      kind: "ImageStreamTag"
+      name: "psi-exporter:latest"
+  postCommit: {}
+  resources: {}
+  source:
+    contextDir: /
+    git:
+      uri: https://github.com/jcpowermac/psi_exporter
+      ref: openshift
+    type: Git
+  strategy:
+    dockerStrategy:
+      dockerfilePath: images/Dockerfile
+    type: Docker
